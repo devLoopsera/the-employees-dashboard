@@ -2,8 +2,8 @@ class DashboardSummary {
   final int totalJobs;
   final int completedJobs;
   final int pendingJobs;
-  final int totalHoursThisMonth;
-  final int totalHoursAllTime;
+  final double totalHoursThisMonth;
+  final double totalHoursAllTime;
 
   DashboardSummary({
     required this.totalJobs,
@@ -18,8 +18,8 @@ class DashboardSummary {
       totalJobs: json['total_jobs'] as int,
       completedJobs: json['completed_jobs'] as int,
       pendingJobs: json['pending_jobs'] as int,
-      totalHoursThisMonth: json['total_hours_this_month'] as int,
-      totalHoursAllTime: json['total_hours_all_time'] as int,
+      totalHoursThisMonth: json['total_hours_this_month'] as double,
+      totalHoursAllTime: json['total_hours_all_time'] as double,
     );
   }
 }
@@ -29,7 +29,7 @@ class Job {
   final String customerName;
   final String date;
   final String status;
-  final int hours;
+  final double hours;
   final String address;
 
   Job({
@@ -47,7 +47,7 @@ class Job {
       customerName: json['customer_name'] as String,
       date: json['date'] as String,
       status: json['status'] as String,
-      hours: json['hours'] as int,
+      hours: json['hours'] as double,
       address: json['address'] as String,
     );
   }

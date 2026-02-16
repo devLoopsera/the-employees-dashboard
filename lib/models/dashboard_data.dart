@@ -15,11 +15,11 @@ class DashboardSummary {
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
     return DashboardSummary(
-      totalJobs: json['total_jobs'] as int,
-      completedJobs: json['completed_jobs'] as int,
-      pendingJobs: json['pending_jobs'] as int,
-      totalHoursThisMonth: json['total_hours_this_month'] as double,
-      totalHoursAllTime: json['total_hours_all_time'] as double,
+      totalJobs: (json['total_jobs'] as num).toInt(),
+      completedJobs: (json['completed_jobs'] as num).toInt(),
+      pendingJobs: (json['pending_jobs'] as num).toInt(),
+      totalHoursThisMonth: (json['total_hours_this_month'] as num).toDouble(),
+      totalHoursAllTime: (json['total_hours_all_time'] as num).toDouble(),
     );
   }
 }
@@ -47,7 +47,7 @@ class Job {
       customerName: json['customer_name'] as String,
       date: json['date'] as String,
       status: json['status'] as String,
-      hours: json['hours'] as double,
+      hours: (json['hours'] as num).toDouble(),
       address: json['address'] as String,
     );
   }

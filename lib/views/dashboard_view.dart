@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import '../models/dashboard_data.dart';
+import 'profile_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DashboardView extends StatelessWidget {
@@ -20,6 +21,10 @@ class DashboardView extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(Icons.person_outline, color: Colors.black),
+            onPressed: () => Get.to(() => ProfileView()),
+          ),
           IconButton(
             icon: Icon(Icons.refresh, color: Colors.black),
             onPressed: () => dashboardController.fetchDashboardData(),

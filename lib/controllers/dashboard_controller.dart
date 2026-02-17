@@ -9,7 +9,17 @@ class DashboardController extends GetxController {
   var summary = Rxn<DashboardSummary>();
   var upcomingJobs = <Job>[].obs;
   var recentJobs = <Job>[].obs;
+  var completedJobs = <Job>[].obs;
+  var pendingJobs = <Job>[].obs;
+  var runningJobs = <Job>[].obs;
+  var cancelledJobs = <Job>[].obs;
   var recentInvoices = <Invoice>[].obs;
+
+  // Pagination state: number of visible items for each category
+  var visibleCompletedCount = 5.obs;
+  var visiblePendingCount = 5.obs;
+  var visibleRunningCount = 5.obs;
+  var visibleCancelledCount = 5.obs;
 
   final GetStorage _storage = GetStorage();
 
@@ -69,7 +79,14 @@ class DashboardController extends GetxController {
              summary.value = dashboardResponse.summary;
              upcomingJobs.value = dashboardResponse.upcomingJobs;
              recentJobs.value = dashboardResponse.recentJobs;
+             completedJobs.value = dashboardResponse.completedJobs;
+             pendingJobs.value = dashboardResponse.pendingJobs;
+             runningJobs.value = dashboardResponse.runningJobs;
+             cancelledJobs.value = dashboardResponse.cancelledJobs;
              recentInvoices.value = dashboardResponse.recentInvoices;
+             
+             // Reset pagination when data is refreshed
+             resetPagination();
            }
         }
       } else {
@@ -86,4 +103,16 @@ class DashboardController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  void resetPagination() {
+    visibleCompletedCount.value = 5;
+    visiblePendingCount.value = 5;
+    visibleRunningCount.value = 5;
+    visibleCancelledCount.value = 5;
+  }
+
+  void loadMoreCompleted() => visibleCompletedCount.value += 5;
+  void loadMorePending() => visiblePendingCount.value += 5;
+  void loadMoreRunning() => visibleRunningCount.value += 5;
+  void loadMoreCancelled() => visibleCancelledCount.value += 5;
 }

@@ -3,297 +3,293 @@ import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import '../models/dashboard_data.dart';
+import '../widgets/app_sidebar.dart';
 import 'profile_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DashboardView extends StatelessWidget {
-  DashboardView({super.key});
+  final String? initialSection;
+  DashboardView({super.key, this.initialSection});
 
   final AuthController authController = Get.find<AuthController>();
+
+  final ScrollController _scrollController = ScrollController();
+  final _runningKey = GlobalKey();
+  final _pendingKey = GlobalKey();
+  final _completedKey = GlobalKey();
+  final _cancelledKey = GlobalKey();
+
+  void _scrollToSection(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
   final DashboardController dashboardController = Get.put(DashboardController());
 
   @override
   Widget build(BuildContext context) {
+    const brandColor = Color(0xFF309278);
+
+    if (initialSection != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Wait a bit for layout and data to be ready
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (initialSection == 'Running') _scrollToSection(_runningKey);
+          if (initialSection == 'Pending') _scrollToSection(_pendingKey);
+          if (initialSection == 'Completed') _scrollToSection(_completedKey);
+          if (initialSection == 'Cancelled') _scrollToSection(_cancelledKey);
+        });
+      });
+    }
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text('Dashboard', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.person_outline, color: Colors.black),
-            onPressed: () => Get.to(() => ProfileView()),
+      backgroundColor: const Color(0xFFF3F4F6),
+      body: Row(
+        children: [
+          // Sidebar
+          AppSidebar(
+            activeItem: 'Dashboard',
+            brandColor: brandColor,
+            onSectionTap: (section) {
+              if (section == 'Profile') {
+                Get.to(() => ProfileView());
+              } else if (section == 'Running') {
+                _scrollToSection(_runningKey);
+              } else if (section == 'Pending') {
+                _scrollToSection(_pendingKey);
+              } else if (section == 'Completed') {
+                _scrollToSection(_completedKey);
+              } else if (section == 'Cancelled') {
+                _scrollToSection(_cancelledKey);
+              }
+            },
           ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.black),
-            onPressed: () => dashboardController.fetchDashboardData(),
-          ),
-          IconButton(
-            icon: Icon(Icons.logout, color: Colors.black),
-            onPressed: () => authController.logout(),
-          ),
-        ],
-      ),
-      body: Obx(() {
-        if (dashboardController.isLoading.value) {
-          return Center(child: CircularProgressIndicator());
-        }
+          // Main Content
+          Expanded(
+            child: Column(
+              children: [
+                _buildMainHeader(brandColor),
+                Expanded(
+                  child: Obx(() {
+                    if (dashboardController.isLoading.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-        final summary = dashboardController.summary.value;
-        if (summary == null) {
-          return Center(child: Text('No data available'));
-        }
+                    final summary = dashboardController.summary.value;
+                    if (summary == null) {
+                      return const Center(child: Text('No data available'));
+                    }
 
-        final employeeName = authController.employee.value?.name ?? 'Employee';
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome, $employeeName',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Running Jobs',
-                      summary.runningJobs.toString(),
-                      Icons.play_circle_outline,
-                      Colors.blue,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Pending Jobs',
-                      summary.pendingJobs.toString(),
-                      Icons.pending_actions,
-                      Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              Row(
-                children: [
-                   Expanded(
-                    child: _buildSummaryCard(
-                      'Completed Jobs',
-                      summary.completedJobs.toString(),
-                      Icons.check_circle_outline,
-                      Colors.green,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Cancelled Jobs',
-                      summary.cancelledJobs.toString(),
-                      Icons.cancel_outlined,
-                      Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Hours (Month)',
-                      summary.totalHoursThisMonth.toString(),
-                      Icons.calendar_month_outlined,
-                      Colors.indigo,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Total Hours',
-                      summary.totalHoursAllTime.toString(),
-                      Icons.history,
-                      Colors.blueGrey,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 32),
-              SizedBox(height: 32),
-              _buildJobSection(
-                'Running Jobs',
-                dashboardController.runningJobs,
-                dashboardController.visibleRunningCount,
-                dashboardController.loadMoreRunning,
-                Colors.blue,
-              ),
-              SizedBox(height: 24),
-              _buildJobSection(
-                'Pending Jobs',
-                dashboardController.pendingJobs,
-                dashboardController.visiblePendingCount,
-                dashboardController.loadMorePending,
-                Colors.orange,
-              ),
-              SizedBox(height: 24),
-              _buildJobSection(
-                'Completed Jobs',
-                dashboardController.completedJobs,
-                dashboardController.visibleCompletedCount,
-                dashboardController.loadMoreCompleted,
-                Colors.green,
-              ),
-              SizedBox(height: 24),
-              _buildJobSection(
-                'Cancelled Jobs',
-                dashboardController.cancelledJobs,
-                dashboardController.visibleCancelledCount,
-                dashboardController.loadMoreCancelled,
-                Colors.red,
-              ),
-              SizedBox(height: 32),
-              Text(
-                'Invoices',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: dashboardController.recentInvoices.length,
-                itemBuilder: (context, index) {
-                  final invoice = dashboardController.recentInvoices[index];
-                  return Card(
-                    elevation: 2,
-                    margin: EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                    return SingleChildScrollView(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(24.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '#${invoice.invoiceNumber}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blueAccent,
-                                ),
-                              ),
-                              Text(
-                                invoice.issueDate,
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ],
+                          _buildContentHeader(),
+                          const SizedBox(height: 32),
+                          _buildJobSection(
+                            'Running Jobs',
+                            dashboardController.runningJobs,
+                            dashboardController.visibleRunningCount,
+                            dashboardController.loadMoreRunning,
+                            brandColor,
+                            key: _runningKey,
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            invoice.customerName,
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          const SizedBox(height: 24),
+                          _buildJobSection(
+                            'Pending Jobs',
+                            dashboardController.pendingJobs,
+                            dashboardController.visiblePendingCount,
+                            dashboardController.loadMorePending,
+                            Colors.orange,
+                            key: _pendingKey,
                           ),
-                          SizedBox(height: 12),
-                          InkWell(
-                            onTap: () async {
-                              final Uri url = Uri.parse(invoice.invoiceLink);
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url, mode: LaunchMode.externalApplication);
-                              } else {
-                                Get.snackbar('Error', 'Could not open invoice link',
-                                    snackPosition: SnackPosition.BOTTOM);
-                              }
-                            },
-                            child: Row(
-                              children: [
-                                Icon(Icons.description, size: 18, color: Colors.blue),
-                                SizedBox(width: 8),
-                                Text(
-                                  'View Invoice',
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          const SizedBox(height: 24),
+                          _buildJobSection(
+                            'Completed Jobs',
+                            dashboardController.completedJobs,
+                            dashboardController.visibleCompletedCount,
+                            dashboardController.loadMoreCompleted,
+                            Colors.green,
+                            key: _completedKey,
+                          ),
+                          const SizedBox(height: 24),
+                          _buildJobSection(
+                            'Cancelled Jobs',
+                            dashboardController.cancelledJobs,
+                            dashboardController.visibleCancelledCount,
+                            dashboardController.loadMoreCancelled,
+                            Colors.red,
+                            key: _cancelledKey,
                           ),
                         ],
                       ),
-                    ),
-                  );
-                },
-              ),
-            ],
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
-        );
-      }),
+        ],
+      ),
     );
   }
 
-  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
+
+
+  Widget _buildMainHeader(Color brandColor) {
     return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      color: Colors.white,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              ),
-              Icon(icon, color: color, size: 20),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Larenting Group LLC / Max Co-Host',
+                  style: TextStyle(fontSize: 24, color: Color(0xFF309278), fontWeight: FontWeight.w400),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: 2,
+                  width: double.infinity,
+                  color: brandColor.withOpacity(0.3),
+                ),
+              ],
+            ),
           ),
-          SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
-          ),
+          const SizedBox(width: 24),
+          _buildProfileDropdown(brandColor),
         ],
       ),
     );
   }
+
+  Widget _buildProfileDropdown(Color brandColor) {
+    final email = authController.employee.value?.email ?? 'info@max.com';
+    final role = 'Employee'; // Default role as it's not in the base Employee login model
+
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (value) {
+        if (value == 'profile') {
+          Get.to(() => ProfileView());
+        } else if (value == 'logout') {
+          authController.logout();
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'profile',
+          child: Row(
+            children: [
+              _buildUserAvatarWithStatus(brandColor, radius: 20),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    email,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4B5563)),
+                  ),
+                  Text(
+                    role,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: [
+              const Icon(Icons.power_settings_new, color: Color(0xFF6B7280), size: 20),
+              const SizedBox(width: 12),
+              const Text(
+                'Abmelden',
+                style: TextStyle(color: Color(0xFF4B5563), fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      ],
+      child: _buildUserAvatarWithStatus(brandColor),
+    );
+  }
+
+  Widget _buildUserAvatarWithStatus(Color brandColor, {double radius = 20}) {
+    return Stack(
+      children: [
+        CircleAvatar(
+          radius: radius,
+          backgroundColor: Colors.grey[200],
+          child: Icon(Icons.person, color: Colors.grey, size: radius * 1.2),
+        ),
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: Container(
+            width: radius * 0.6,
+            height: radius * 0.6,
+            decoration: BoxDecoration(
+              color: const Color(0xFF4ADE80),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContentHeader() {
+    final employeeName = authController.employee.value?.name ?? 'Employee';
+    return Row(
+      children: [
+        Text(
+          employeeName,
+          style: const TextStyle(fontSize: 24, color: Color(0xFF4B5563), fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildJobSection(
     String title,
     RxList<Job> jobs,
     RxInt visibleCount,
     VoidCallback onLoadMore,
-    Color categoryColor,
-  ) {
+    Color categoryColor, {
+    Key? key,
+  }) {
     return Obx(() {
-      if (jobs.isEmpty) return SizedBox.shrink();
+      if (jobs.isEmpty) return const SizedBox.shrink();
 
       final displayCount = visibleCount.value > jobs.length ? jobs.length : visibleCount.value;
       final displayJobs = jobs.take(displayCount).toList();
 
       return Column(
+        key: key,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
             child: Text(
               title,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: categoryColor),
             ),
           ),
           ...displayJobs.map((job) => _buildExpandableJobCard(job, categoryColor)),

@@ -77,28 +77,6 @@ class Job {
   }
 }
 
-class Invoice {
-  final String customerName;
-  final int invoiceNumber;
-  final String issueDate;
-  final String invoiceLink;
-
-  Invoice({
-    required this.customerName,
-    required this.invoiceNumber,
-    required this.issueDate,
-    required this.invoiceLink,
-  });
-
-  factory Invoice.fromJson(Map<String, dynamic> json) {
-    return Invoice(
-      customerName: json['customer_name'] as String,
-      invoiceNumber: json['invoice_number'] as int,
-      issueDate: json['issue_date'] as String,
-      invoiceLink: json['invoice_link'] as String,
-    );
-  }
-}
 
 class DashboardResponse {
   final bool success;
@@ -109,7 +87,6 @@ class DashboardResponse {
   final List<Job> pendingJobs;
   final List<Job> runningJobs;
   final List<Job> cancelledJobs;
-  final List<Invoice> recentInvoices;
 
   DashboardResponse({
     required this.success,
@@ -120,7 +97,6 @@ class DashboardResponse {
     required this.pendingJobs,
     required this.runningJobs,
     required this.cancelledJobs,
-    required this.recentInvoices,
   });
 
   factory DashboardResponse.fromJson(dynamic jsonResponse) {
@@ -167,10 +143,6 @@ class DashboardResponse {
               ?.map((e) => Job.fromJson(e as Map<String, dynamic>))
               .toList() ??
           completed,
-      recentInvoices: (data['invoices'] as List? ?? data['recent_invoices'] as List?)
-              ?.map((e) => Invoice.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
     );
   }
 }

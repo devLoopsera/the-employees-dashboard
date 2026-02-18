@@ -2,118 +2,183 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/profile_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../widgets/app_sidebar.dart';
+import 'dashboard_view.dart';
 
 class ProfileView extends StatelessWidget {
   ProfileView({super.key});
 
   final ProfileController controller = Get.put(ProfileController());
   final AuthController authController = Get.find<AuthController>();
+  final brandColor = const Color(0xFF309278);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Get.back(),
-        ),
-        title: Text('My Profile', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.black),
-            onPressed: () => controller.fetchProfile(),
+      backgroundColor: const Color(0xFFF3F4F6),
+      body: Row(
+        children: [
+          // Sidebar
+          AppSidebar(
+            activeItem: 'Profile',
+            brandColor: brandColor,
+            onSectionTap: (section) {
+              if (section == 'Dashboard') {
+                Get.offAll(() => DashboardView());
+              } else if (section != 'Profile') {
+                Get.offAll(() => DashboardView(initialSection: section));
+              }
+            },
           ),
-          IconButton(
-            icon: Icon(Icons.logout, color: Colors.black),
-            onPressed: () => authController.logout(),
+          // Main Content
+          Expanded(
+            child: Column(
+              children: [
+                _buildProfileHeader(),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.isLoading.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final profile = controller.profile.value;
+                    if (profile == null) {
+                      return const Center(child: Text('No profile data available'));
+                    }
+
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildProfileInfo(profile),
+                          const SizedBox(height: 24),
+                          _buildSectionTitle('Personal Information'),
+                          _buildInfoCard([
+                            _buildInfoRow(Icons.email_outlined, 'Email', profile.email),
+                            _buildInfoRow(Icons.phone_outlined, 'Phone', profile.phone),
+                            _buildInfoRow(Icons.location_on_outlined, 'Address', profile.address),
+                            _buildInfoRow(Icons.public_outlined, 'Country', profile.country),
+                          ]),
+                          const SizedBox(height: 24),
+                          _buildSectionTitle('Work Details'),
+                          _buildInfoCard([
+                            _buildInfoRow(Icons.work_outline, 'Role', profile.role),
+                            _buildInfoRow(Icons.payments_outlined, 'Hourly Rate', '€${profile.hourlyRate}'),
+                            _buildInfoRow(Icons.event_available_outlined, 'Availability', profile.availability),
+                            _buildInfoRow(Icons.info_outline, 'Status', profile.status, 
+                              color: profile.status == 'Active' ? Colors.green : Colors.orange),
+                          ]),
+                          const SizedBox(height: 24),
+                          _buildSectionTitle('Languages & Social'),
+                          _buildInfoCard([
+                            _buildInfoRow(Icons.language, 'Primary Language', profile.language1),
+                            _buildInfoRow(Icons.language, 'Secondary Language', profile.language2),
+                            _buildInfoRow(Icons.chat_bubble_outline, 'Telegram Chat ID', profile.telegramChatId),
+                          ]),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        final profile = controller.profile.value;
-        if (profile == null) {
-          return Center(child: Text('No profile data available'));
-        }
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(profile),
-              SizedBox(height: 24),
-              _buildSectionTitle('Personal Information'),
-              _buildInfoCard([
-                _buildInfoRow(Icons.email_outlined, 'Email', profile.email),
-                _buildInfoRow(Icons.phone_outlined, 'Phone', profile.phone),
-                _buildInfoRow(Icons.location_on_outlined, 'Address', profile.address),
-                _buildInfoRow(Icons.public_outlined, 'Country', profile.country),
-              ]),
-              SizedBox(height: 24),
-              _buildSectionTitle('Work Details'),
-              _buildInfoCard([
-                _buildInfoRow(Icons.work_outline, 'Role', profile.role),
-                _buildInfoRow(Icons.payments_outlined, 'Hourly Rate', '€${profile.hourlyRate}'),
-                _buildInfoRow(Icons.event_available_outlined, 'Availability', profile.availability),
-                _buildInfoRow(Icons.info_outline, 'Status', profile.status, 
-                  color: profile.status == 'Active' ? Colors.green : Colors.orange),
-              ]),
-              SizedBox(height: 24),
-              _buildSectionTitle('Languages & Social'),
-              _buildInfoCard([
-                _buildInfoRow(Icons.language, 'Primary Language', profile.language1),
-                _buildInfoRow(Icons.language, 'Secondary Language', profile.language2),
-                _buildInfoRow(Icons.chat_bubble_outline, 'Telegram Chat ID', profile.telegramChatId),
-              ]),
-              SizedBox(height: 32),
-            ],
-          ),
-        );
-      }),
     );
   }
 
-  Widget _buildHeader(dynamic profile) {
+  Widget _buildProfileHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Profile Settings',
+                  style: TextStyle(fontSize: 24, color: brandColor, fontWeight: FontWeight.w400),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: 2,
+                  width: double.infinity,
+                  color: brandColor.withOpacity(0.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 24),
+          IconButton(
+            icon: Icon(Icons.refresh, color: brandColor),
+            onPressed: () => controller.fetchProfile(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileInfo(dynamic profile) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Colors.grey.withOpacity(0.1),
             spreadRadius: 2,
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
-            child: Text(
-              profile.name[0].toUpperCase(),
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-            ),
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: brandColor.withOpacity(0.1),
+                child: Text(
+                  profile.name[0].toUpperCase(),
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: brandColor),
+                ),
+              ),
+              Positioned(
+                right: 4,
+                bottom: 4,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4ADE80),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 16),
-          Text(
-            profile.name,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            profile.role,
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+          const SizedBox(width: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                profile.name,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                profile.role,
+                style: TextStyle(color: Colors.grey[600], fontSize: 16),
+              ),
+            ],
           ),
         ],
       ),
@@ -171,7 +236,7 @@ class ProfileView extends StatelessWidget {
               color: Colors.grey[50],
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 20, color: Colors.blueAccent),
+            child: Icon(icon, size: 20, color: brandColor),
           ),
           SizedBox(width: 16),
           Expanded(

@@ -13,7 +13,6 @@ class DashboardController extends GetxController {
   var pendingJobs = <Job>[].obs;
   var runningJobs = <Job>[].obs;
   var cancelledJobs = <Job>[].obs;
-  var recentInvoices = <Invoice>[].obs;
 
   // Pagination state: number of visible items for each category
   var visibleCompletedCount = 5.obs;
@@ -83,7 +82,6 @@ class DashboardController extends GetxController {
              pendingJobs.value = dashboardResponse.pendingJobs;
              runningJobs.value = dashboardResponse.runningJobs;
              cancelledJobs.value = dashboardResponse.cancelledJobs;
-             recentInvoices.value = dashboardResponse.recentInvoices;
              
              // Reset pagination when data is refreshed
              resetPagination();

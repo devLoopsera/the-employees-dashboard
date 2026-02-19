@@ -14,27 +14,33 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 1024;
+
+    final sidebar = AppSidebar(
+      activeItem: 'Profile',
+      brandColor: brandColor,
+      onSectionTap: (section) {
+        if (section == 'Dashboard') {
+          Get.offAll(() => DashboardView());
+        } else if (section != 'Profile') {
+          Get.offAll(() => DashboardView(initialSection: section));
+        }
+      },
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
+      drawer: isMobile ? Drawer(child: sidebar) : null,
       body: Row(
         children: [
-          // Sidebar
-          AppSidebar(
-            activeItem: 'Profile',
-            brandColor: brandColor,
-            onSectionTap: (section) {
-              if (section == 'Dashboard') {
-                Get.offAll(() => DashboardView());
-              } else if (section != 'Profile') {
-                Get.offAll(() => DashboardView(initialSection: section));
-              }
-            },
-          ),
+          // Sidebar (only on Desktop)
+          if (!isMobile) sidebar,
+          
           // Main Content
           Expanded(
             child: Column(
               children: [
-                _buildProfileHeader(),
+                _buildProfileHeader(isMobile),
                 Expanded(
                   child: Obx(() {
                     if (controller.isLoading.value) {
@@ -47,11 +53,11 @@ class ProfileView extends StatelessWidget {
                     }
 
                     return SingleChildScrollView(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildProfileInfo(profile),
+                          _buildProfileInfo(profile, isMobile),
                           const SizedBox(height: 24),
                           _buildSectionTitle('Personal Information'),
                           _buildInfoCard([
@@ -90,43 +96,49 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Profile Settings',
-                  style: TextStyle(fontSize: 24, color: brandColor, fontWeight: FontWeight.w400),
+
+  Widget _buildProfileHeader(bool isMobile) {
+    return Builder(
+      builder: (context) => Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 32, 
+          vertical: isMobile ? 12 : 20
+        ),
+        color: Colors.white,
+        child: Row(
+          children: [
+            if (isMobile) ...[
+              IconButton(
+                icon: const Icon(Icons.menu, color: Color(0xFF4B5563)),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                'Profile Settings',
+                style: TextStyle(
+                  fontSize: isMobile ? 18 : 24, 
+                  color: const Color(0xFF4B5563), 
+                  fontWeight: FontWeight.bold
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  height: 2,
-                  width: double.infinity,
-                  color: brandColor.withOpacity(0.3),
-                ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: 24),
-          IconButton(
-            icon: Icon(Icons.refresh, color: brandColor),
-            onPressed: () => controller.fetchProfile(),
-          ),
-        ],
+            const SizedBox(width: 24),
+            IconButton(
+              icon: Icon(Icons.refresh, color: brandColor),
+              onPressed: () => controller.fetchProfile(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildProfileInfo(dynamic profile) {
+  Widget _buildProfileInfo(dynamic profile, bool isMobile) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -144,19 +156,19 @@ class ProfileView extends StatelessWidget {
           Stack(
             children: [
               CircleAvatar(
-                radius: 40,
+                radius: isMobile ? 30 : 40,
                 backgroundColor: brandColor.withOpacity(0.1),
                 child: Text(
                   profile.name[0].toUpperCase(),
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: brandColor),
+                  style: TextStyle(fontSize: isMobile ? 24 : 32, fontWeight: FontWeight.bold, color: brandColor),
                 ),
               ),
               Positioned(
-                right: 4,
-                bottom: 4,
+                right: isMobile ? 2 : 4,
+                bottom: isMobile ? 2 : 4,
                 child: Container(
-                  width: 16,
-                  height: 16,
+                  width: isMobile ? 12 : 16,
+                  height: isMobile ? 12 : 16,
                   decoration: BoxDecoration(
                     color: const Color(0xFF4ADE80),
                     shape: BoxShape.circle,
@@ -166,19 +178,21 @@ class ProfileView extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(width: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                profile.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                profile.role,
-                style: TextStyle(color: Colors.grey[600], fontSize: 16),
-              ),
-            ],
+          SizedBox(width: isMobile ? 16 : 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile.name,
+                  style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  profile.role,
+                  style: TextStyle(color: Colors.grey[600], fontSize: isMobile ? 14 : 16),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -28,30 +28,39 @@ class AppSidebar extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(32.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Employee',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: brandColor,
+            child: Obx(() {
+              final fullName = authController.employee.value?.name ?? 'Employee';
+              final names = fullName.split(' ');
+              final firstName = names[0];
+              final lastName = names.length > 1 ? names.sublist(1).join(' ') : 'Dashboard';
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    firstName,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: brandColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  'Dashboard',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: brandColor,
+                  Text(
+                    lastName,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: brandColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
           ),
           const SizedBox(height: 8),
-          _buildSidebarItem('Dashboard', Icons.dashboard_outlined, activeItem == 'Dashboard', brandColor, onTap: () {
+          _buildSidebarItem('Dashboard', Icons.dashboard_outlined, activeItem == 'Dashboard', brandColor, context, onTap: () {
             if (activeItem != 'Dashboard') {
               onSectionTap?.call('Dashboard');
             }
@@ -61,6 +70,7 @@ class AppSidebar extends StatelessWidget {
                 Icons.play_circle_outline,
                 activeItem == 'Running',
                 brandColor,
+                context,
                 onTap: () => onSectionTap?.call('Running'),
               )),
           Obx(() => _buildSidebarItem(
@@ -68,29 +78,32 @@ class AppSidebar extends StatelessWidget {
                 Icons.pending_actions,
                 activeItem == 'Pending',
                 brandColor,
+                context,
                 onTap: () => onSectionTap?.call('Pending'),
-              )),
-          Obx(() => _buildSidebarItem(
-                'Completed (${dashboardController.completedJobs.length})',
-                Icons.check_circle_outline,
-                activeItem == 'Completed',
-                brandColor,
-                onTap: () => onSectionTap?.call('Completed'),
               )),
           Obx(() => _buildSidebarItem(
                 'Cancelled (${dashboardController.cancelledJobs.length})',
                 Icons.cancel_outlined,
                 activeItem == 'Cancelled',
                 brandColor,
+                context,
                 onTap: () => onSectionTap?.call('Cancelled'),
               )),
-          _buildSidebarItem('Profile', Icons.person_outline, activeItem == 'Profile', brandColor, onTap: () {
+          Obx(() => _buildSidebarItem(
+                'Completed (${dashboardController.completedJobs.length})',
+                Icons.check_circle_outline,
+                activeItem == 'Completed',
+                brandColor,
+                context,
+                onTap: () => onSectionTap?.call('Completed'),
+              )),
+          _buildSidebarItem('Profile', Icons.person_outline, activeItem == 'Profile', brandColor, context, onTap: () {
             if (activeItem != 'Profile') {
               onSectionTap?.call('Profile');
             }
           }),
           const Spacer(),
-          _buildSidebarItem('Logout', Icons.logout, false, brandColor, onTap: () {
+          _buildSidebarItem('Logout', Icons.logout, false, brandColor, context, onTap: () {
             authController.logout();
           }),
           const SizedBox(height: 16),
@@ -99,9 +112,15 @@ class AppSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildSidebarItem(String title, IconData icon, bool isActive, Color brandColor, {VoidCallback? onTap}) {
+  Widget _buildSidebarItem(String title, IconData icon, bool isActive, Color brandColor, BuildContext context, {VoidCallback? onTap}) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        // Close drawer if it's open (mobile mode) BEFORE navigation
+        if (Scaffold.of(context).isDrawerOpen) {
+          Navigator.pop(context);
+        }
+        onTap?.call();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         decoration: BoxDecoration(

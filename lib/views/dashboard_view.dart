@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/dashboard_controller.dart';
+import '../controllers/profile_controller.dart';
 import '../models/dashboard_data.dart';
 import '../widgets/app_sidebar.dart';
+import '../widgets/glowing_border.dart';
+import '../widgets/glowing_button.dart';
 import 'profile_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -30,10 +33,12 @@ class DashboardView extends StatelessWidget {
     }
   }
   final DashboardController dashboardController = Get.put(DashboardController());
+  final ProfileController profileController = Get.put(ProfileController());
 
   @override
   Widget build(BuildContext context) {
     const brandColor = Color(0xFF309278);
+    final isMobile = MediaQuery.of(context).size.width < 1024; // Standard breakpoint for sidebar layout
 
     if (initialSection != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -47,33 +52,37 @@ class DashboardView extends StatelessWidget {
       });
     }
 
+    final sidebar = AppSidebar(
+      activeItem: 'Dashboard',
+      brandColor: brandColor,
+      onSectionTap: (section) {
+        if (section == 'Profile') {
+          Get.to(() => ProfileView());
+        } else if (section == 'Running') {
+          _scrollToSection(_runningKey);
+        } else if (section == 'Pending') {
+          _scrollToSection(_pendingKey);
+        } else if (section == 'Completed') {
+          _scrollToSection(_completedKey);
+        } else if (section == 'Cancelled') {
+          _scrollToSection(_cancelledKey);
+        }
+      },
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
+      drawer: isMobile ? Drawer(child: sidebar) : null,
       body: Row(
         children: [
-          // Sidebar
-          AppSidebar(
-            activeItem: 'Dashboard',
-            brandColor: brandColor,
-            onSectionTap: (section) {
-              if (section == 'Profile') {
-                Get.to(() => ProfileView());
-              } else if (section == 'Running') {
-                _scrollToSection(_runningKey);
-              } else if (section == 'Pending') {
-                _scrollToSection(_pendingKey);
-              } else if (section == 'Completed') {
-                _scrollToSection(_completedKey);
-              } else if (section == 'Cancelled') {
-                _scrollToSection(_cancelledKey);
-              }
-            },
-          ),
+          // Sidebar (only on Desktop)
+          if (!isMobile) sidebar,
+          
           // Main Content
           Expanded(
             child: Column(
               children: [
-                _buildMainHeader(brandColor),
+                _buildMainHeader(brandColor, isMobile),
                 Expanded(
                   child: Obx(() {
                     if (dashboardController.isLoading.value) {
@@ -87,11 +96,13 @@ class DashboardView extends StatelessWidget {
 
                     return SingleChildScrollView(
                       controller: _scrollController,
-                      padding: const EdgeInsets.all(24.0),
+                      padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildContentHeader(),
+                          const SizedBox(height: 24),
+                          _buildSummarySection(summary, brandColor, isMobile),
                           const SizedBox(height: 32),
                           _buildJobSection(
                             'Running Jobs',
@@ -112,21 +123,21 @@ class DashboardView extends StatelessWidget {
                           ),
                           const SizedBox(height: 24),
                           _buildJobSection(
-                            'Completed Jobs',
-                            dashboardController.completedJobs,
-                            dashboardController.visibleCompletedCount,
-                            dashboardController.loadMoreCompleted,
-                            Colors.green,
-                            key: _completedKey,
-                          ),
-                          const SizedBox(height: 24),
-                          _buildJobSection(
                             'Cancelled Jobs',
                             dashboardController.cancelledJobs,
                             dashboardController.visibleCancelledCount,
                             dashboardController.loadMoreCancelled,
                             Colors.red,
                             key: _cancelledKey,
+                          ),
+                          const SizedBox(height: 24),
+                          _buildJobSection(
+                            'Recent 5 Completed Jobs',
+                            dashboardController.completedJobs,
+                            dashboardController.visibleCompletedCount,
+                            dashboardController.loadMoreCompleted,
+                            Colors.green,
+                            key: _completedKey,
                           ),
                         ],
                       ),
@@ -143,32 +154,44 @@ class DashboardView extends StatelessWidget {
 
 
 
-  Widget _buildMainHeader(Color brandColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Larenting Group LLC / Max Co-Host',
-                  style: TextStyle(fontSize: 24, color: Color(0xFF309278), fontWeight: FontWeight.w400),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  height: 2,
-                  width: double.infinity,
-                  color: brandColor.withOpacity(0.3),
-                ),
-              ],
+  Widget _buildMainHeader(Color brandColor, bool isMobile) {
+    return Builder(
+      builder: (context) => Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 32, 
+          vertical: isMobile ? 12 : 20
+        ),
+        color: Colors.white,
+        child: Row(
+          children: [
+            if (isMobile) ...[
+              IconButton(
+                icon: const Icon(Icons.menu, color: Color(0xFF4B5563)),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isMobile)
+                    const Text(
+                      'Dashboard',
+                      style: TextStyle(fontSize: 24, color: Color(0xFF4B5563), fontWeight: FontWeight.bold),
+                    ),
+                  if (isMobile)
+                    const Text(
+                      'Dashboard',
+                      style: TextStyle(fontSize: 18, color: Color(0xFF4B5563), fontWeight: FontWeight.bold),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 24),
-          _buildProfileDropdown(brandColor),
-        ],
+            const SizedBox(width: 24),
+            _buildProfileDropdown(brandColor),
+          ],
+        ),
       ),
     );
   }
@@ -255,14 +278,120 @@ class DashboardView extends StatelessWidget {
   }
 
   Widget _buildContentHeader() {
-    final employeeName = authController.employee.value?.name ?? 'Employee';
-    return Row(
-      children: [
-        Text(
-          employeeName,
-          style: const TextStyle(fontSize: 24, color: Color(0xFF4B5563), fontWeight: FontWeight.bold),
-        ),
-      ],
+    return Obx(() {
+      final employeeName = profileController.profile.value?.name ?? 
+                          authController.employee.value?.name ?? 
+                          'Employee';
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome back,',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600], fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            employeeName,
+            style: const TextStyle(fontSize: 28, color: Color(0xFF1F2937), fontWeight: FontWeight.bold),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildSummarySection(DashboardSummary summary, Color brandColor, bool isMobile) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double spacing = 16.0;
+        final double cardWidth = isMobile 
+            ? constraints.maxWidth 
+            : (constraints.maxWidth - (spacing * 2)) / 3;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            _buildSummaryCard(
+              'Activity Overview',
+              'Total: ${summary.totalJobs}',
+              'Running: ${summary.runningJobs} | Pending: ${summary.pendingJobs}',
+              Icons.work_outline,
+              brandColor,
+              cardWidth,
+            ),
+            _buildSummaryCard(
+              'Project Outcomes',
+              'Completed: ${summary.completedJobs}',
+              'Cancelled: ${summary.cancelledJobs}',
+              Icons.assignment_turned_in_outlined,
+              Colors.blue,
+              cardWidth,
+            ),
+            _buildSummaryCard(
+              'Time Analytics',
+              'Month: ${summary.totalHoursThisMonth}h',
+              'Legacy Total: ${summary.totalHoursAllTime}h',
+              Icons.analytics_outlined,
+              Colors.purple,
+              cardWidth,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSummaryCard(String title, String primary, String secondary, IconData icon, Color color, double width) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600, letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  primary,
+                  style: const TextStyle(fontSize: 18, color: Color(0xFF1F2937), fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  secondary,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w400),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -274,7 +403,9 @@ class DashboardView extends StatelessWidget {
     VoidCallback onLoadMore,
     Color categoryColor, {
     Key? key,
+    bool showSeeMore = true,
   }) {
+    final isMobile = Get.width < 1024;
     return Obx(() {
       if (jobs.isEmpty) return const SizedBox.shrink();
 
@@ -289,19 +420,25 @@ class DashboardView extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12.0),
             child: Text(
               title,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: categoryColor),
+              style: TextStyle(fontSize: isMobile ? 18 : 20, fontWeight: FontWeight.bold, color: categoryColor),
             ),
           ),
           ...displayJobs.map((job) => _buildExpandableJobCard(job, categoryColor)),
-          if (visibleCount.value < jobs.length)
+          if (showSeeMore && visibleCount.value < jobs.length)
             Padding(
               padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
               child: Center(
-                child: TextButton.icon(
+                child: GlowingButton(
                   onPressed: onLoadMore,
-                  icon: Icon(Icons.add_circle_outline),
-                  label: Text('See More'),
-                  style: TextButton.styleFrom(foregroundColor: categoryColor),
+                  glowColor: categoryColor,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_circle_outline, size: 18, color: categoryColor),
+                      const SizedBox(width: 8),
+                      const Text('See More'),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -312,139 +449,153 @@ class DashboardView extends StatelessWidget {
 
   Widget _buildExpandableJobCard(Job job, Color statusColor) {
     final isExpanded = false.obs;
+    final isMobile = Get.width < 600;
 
-    return Obx(() => Card(
-          elevation: 2,
-          margin: EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Obx(() => Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: GlowingBorder(
+            borderRadius: 12,
+            glowSpread: 64,
+            borderWidth: 2,
+            child: Card(
+              elevation: 2,
+              margin: EdgeInsets.zero, // margin handled by Padding above
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          job.date,
-                          style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            job.status.toUpperCase(),
-                            style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            job.customerName,
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            isExpanded.value ? Icons.expand_less : Icons.expand_more,
-                            color: Colors.grey,
-                          ),
-                          onPressed: () => isExpanded.toggle(),
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey),
-                        SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            job.address,
-                            style: TextStyle(color: Colors.grey[700]),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
-                        SizedBox(width: 4),
-                        Text(
-                          '${job.hours} scheduled hours',
-                          style: TextStyle(color: Colors.grey[700], fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              if (isExpanded.value)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
-                    border: Border(top: BorderSide(color: Colors.grey[200]!)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDetailRow('Customer Schedule', 
-                        '${job.customerStartTime ?? "N/A"} - ${job.customerStopTime ?? "N/A"}'),
-                      SizedBox(height: 8),
-                      _buildDetailRow('Employee Time', 
-                        '${job.employeeStartTime ?? "N/A"} - ${job.employeeEndTime ?? "N/A"}'),
-                      if (job.status == 'completed' && job.employeeTotalHours != null) ...[
-                        SizedBox(height: 12),
-                        Divider(),
-                        SizedBox(height: 4),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Actual Hours Done:', style: TextStyle(fontWeight: FontWeight.bold)),
                             Text(
-                              '${job.employeeTotalHours} hours',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                              job.date,
+                              style: TextStyle(
+                                color: Colors.grey[600], 
+                                fontWeight: FontWeight.w500,
+                                fontSize: isMobile ? 12 : 14
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                job.status.toUpperCase(),
+                                style: TextStyle(color: statusColor, fontSize: isMobile ? 9 : 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                job.customerName,
+                                style: TextStyle(fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                isExpanded.value ? Icons.expand_less : Icons.expand_more,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () => isExpanded.toggle(),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                job.address,
+                                style: TextStyle(color: Colors.grey[700], fontSize: isMobile ? 13 : 14),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${job.hours} scheduled hours',
+                              style: TextStyle(color: Colors.grey[700], fontSize: isMobile ? 12 : 13),
                             ),
                           ],
                         ),
                       ],
-                      if (job.status == 'cancelled' && job.cancelledDateTime != null && job.cancelledDateTime!.isNotEmpty) ...[
-                         SizedBox(height: 8),
-                         _buildDetailRow('Cancelled On', job.cancelledDateTime!),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-            ],
+                  if (isExpanded.value)
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isMobile ? 12 : 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailRow('Customer Schedule', 
+                            '${job.customerStartTime ?? "N/A"} - ${job.customerStopTime ?? "N/A"}', isMobile),
+                          const SizedBox(height: 8),
+                          _buildDetailRow('Employee Time', 
+                            '${job.employeeStartTime ?? "N/A"} - ${job.employeeEndTime ?? "N/A"}', isMobile),
+                          if (job.status == 'completed' && job.employeeTotalHours != null) ...[
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Actual Hours Done:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 13 : 14)),
+                                Text(
+                                  '${job.employeeTotalHours} hours',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: isMobile ? 13 : 14),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (job.status == 'cancelled' && job.cancelledDateTime != null && job.cancelledDateTime!.isNotEmpty) ...[
+                             const SizedBox(height: 8),
+                             _buildDetailRow('Cancelled On', job.cancelledDateTime!, isMobile),
+                          ],
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ));
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-        SizedBox(height: 2),
-        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(fontSize: isMobile ? 11 : 12, color: Colors.grey[600])),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(fontSize: isMobile ? 13 : 14, fontWeight: FontWeight.w500)),
       ],
     );
   }
